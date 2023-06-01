@@ -1,0 +1,102 @@
+import requests
+from bs4 import BeautifulSoup
+import random
+from collections import Counter
+
+jsondata = {}
+
+def get_lastindex():
+    url = 'https://datachart.500.com/dlt/history/newinc/history.php'
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    table = soup.find('tbody')
+    rows = table.find_all('tr')
+    for row in rows[0:]:
+        cells = row.find_all('td')
+        date = cells[0].text.strip()
+        #print(date)
+        return date
+lastindex = get_lastindex()
+
+def get_history(rencent=50,lastindex = get_lastindex()):
+    startindex = int(lastindex) - rencent
+    print("current index：{}，length：{}, range：{} ~ {}".format(int(lastindex),rencent,startindex,int(lastindex)))
+          
+    url = 'https://datachart.500.com/dlt/history/newinc/history.php?start='+str(startindex) + '&end='+str(lastindex)
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    #print(soup)
+    #print("11111111111111111111111111111111111111111111111111111111111111111")
+    table = soup.find('tbody')
+    #print(table)
+    #exit(0)
+    rows = table.find_all('tr')
+
+    for row in rows[0:]:
+        cells = row.find_all('td')
+        date = cells[0].text.strip()
+        numbers = [cell.text.strip() for cell in cells[1:8]]
+        redball = [cell.text.strip() for cell in cells[1:6]]
+        blueball = [cell.text.strip() for cell in cells[6:8]]
+        ##print(date,redball,blueball)
+        data = {
+            'redball' : redball,
+            'blueball' : blueball
+        }
+        jsondata[date] = data
+    #print(jsondata)
+    #for  i in jsondata:
+    #    print(i,jsondata[i]['redball'],jsondata[i]['blueball'])
+    return jsondata
+
+
+def generate_random():
+    red_balls = sorted(random.sample(range(1, 36), 5))
+    blue_ball = sorted(random.sample(range(1, 12), 2))
+    print(f"precast num：{red_balls}, {blue_ball}")
+
+def calc_redball():
+    redballs = []
+    for data in jsondata.values():
+        redballs.extend(data['redball'])
+
+    all_nums = set(range(1, 36))
+    appeared_nums = all_nums & set(redballs)
+    num_counts = Counter(redballs)
+    sorted_counts = sorted(num_counts.items(), key=lambda x: x[1], reverse=True)
+
+    ##for num, count in sorted_counts:
+        ##print(f"num {num} occurs {count} times")
+    least_common_nums = num_counts.most_common()[:-6:-1]
+    print("precast redball:",least_common_nums[0][0],least_common_nums[1][0],least_common_nums[2][0],least_common_nums[3][0],least_common_nums[4][0])
+
+def calc_blueball():
+    blueball = []
+    for data in jsondata.values():
+        blueball.extend(data['blueball'])
+
+    all_nums = set(range(1, 12))
+    appeared_nums = all_nums & set(blueball)
+    num_counts = Counter(blueball)
+    sorted_counts = sorted(num_counts.items(), key=lambda x: x[1], reverse=True)
+    ##for num, count in sorted_counts:
+    ##    print(f"num {num} occurs {count} times")
+
+    least_common_nums = num_counts.most_common()[:-3:-1]
+    print("precast blueball：",least_common_nums[0][0],least_common_nums[1][0])
+    
+
+#define how long you want to see
+def generate(numbers):
+    get_history(numbers)
+    print("redball maybe:")
+    calc_redball()
+    print("blueball maybe:")
+    calc_blueball()
+
+generate(10)
+generate(20)
+generate(30)
+generate(40)
+generate(50)
+generate(100)
